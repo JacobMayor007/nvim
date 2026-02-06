@@ -1,4 +1,3 @@
--- 1. BOOTSTRAP LAZY.NVIM
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
   vim.fn.system({
@@ -29,6 +28,27 @@ require("lazy").setup({
       require("luasnip.loaders.from_vscode").lazy_load()
     end,
   },
+
+  {
+    "nvim-tree/nvim-tree.lua",
+    version = "*",
+    lazy = false,
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    config = function()
+      require("nvim-tree").setup {}
+    end,
+  },
+
+  "nvimtools/none-ls.nvim", -- The plugin that runs Prettier
+  "nvim-lua/plenary.nvim",   -- Required dependency
+
+})
+
+require("mason-lspconfig").setup({
+    ensure_installed = { 
+        "gopls", "vtsls", "tailwindcss", "emmet_language_server",
+        "prettier" -- Add this!
+    }
 })
 
 -- 3. MASON & LSP CONFIGURATION
@@ -128,3 +148,15 @@ cmp.setup({
     { name = 'path' },     -- File paths
   })
 })
+
+-- Ctrl + Enter to go to definition
+vim.keymap.set('n', '<C-CR>', '<cmd>lua vim.lsp.buf.definition()<CR>', { desc = 'Go to definition' })
+
+-- Undo with Ctrl + Z in Insert Mode
+vim.keymap.set('i', '<C-z>', '<Cmd>undo<CR>', { desc = 'Undo' })
+
+-- Redo with Ctrl + Y (Common Windows shortcut)
+vim.keymap.set('i', '<C-y>', '<Cmd>redo<CR>', { desc = 'Redo' })
+
+-- Press Ctrl + n to open/close the file tree
+vim.keymap.set('n', '<C-n>', ':NvimTreeToggle<CR>', { silent = true })

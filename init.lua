@@ -53,8 +53,8 @@ require("lazy").setup({"neovim/nvim-lspconfig", {
     config = function()
         require("nvim-tree").setup({
             filters = {
-                dotfiles = false, -- This shows .env, .gitignore, etc.
-                git_ignored = false -- This shows files even if they are in .gitignore
+                dotfiles = false,
+                git_ignored = false
             },
             view = {
                 width = 35,
@@ -66,25 +66,25 @@ require("lazy").setup({"neovim/nvim-lspconfig", {
             }
         })
     end
-}, "nvimtools/none-ls.nvim", "nvim-lua/plenary.nvim", -- ========== ADD THIS: TOGGLETERM (Better Terminal!) ==========
+}, "nvimtools/none-ls.nvim", "nvim-lua/plenary.nvim", -- ========== TOGGLETERM ==========
 {
     "akinsho/toggleterm.nvim",
     version = "*",
     config = function()
         require("toggleterm").setup({
             size = 20,
-            open_mapping = [[<c-\>]], -- Ctrl + \ to toggle terminal
+            open_mapping = [[<c-\>]],
             hide_numbers = true,
             shade_terminals = true,
             start_in_insert = true,
             insert_mappings = true,
             terminal_mappings = true,
             persist_size = true,
-            direction = "float", -- Options: 'vertical' | 'horizontal' | 'tab' | 'float'
+            direction = "float",
             close_on_exit = true,
             shell = vim.o.shell,
             float_opts = {
-                border = "curved", -- Options: 'single' | 'double' | 'shadow' | 'curved'
+                border = "curved",
                 width = 120,
                 height = 30
             }
@@ -93,17 +93,17 @@ require("lazy").setup({"neovim/nvim-lspconfig", {
 }})
 
 -- =========================================================================
--- DIAGNOSTICS CONFIGURATION - SHOW ERRORS IN INSERT MODE TOO!
+-- DIAGNOSTICS CONFIGURATION
 -- =========================================================================
 vim.diagnostic.config({
     virtual_text = true,
     signs = true,
     underline = true,
-    update_in_insert = true,
+    update_in_insert = false, -- CHANGED FROM true TO false
     severity_sort = true
 })
 
--- Error icons in the gutter
+-- Error icons
 local signs = {
     Error = "E",
     Warn = "W",
@@ -120,11 +120,10 @@ for type, icon in pairs(signs) do
 end
 
 -- =========================================================================
--- 3. GET LSP CAPABILITIES
+-- 3. LSP SERVER CONFIGURATION
 -- =========================================================================
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
--- 4. LSP SERVER CONFIGURATION
 -- GO Setup
 vim.lsp.config("gopls", {
     cmd = {"gopls"},
@@ -134,11 +133,24 @@ vim.lsp.config("gopls", {
 })
 vim.lsp.enable("gopls")
 
--- React & Node.js (ts_ls)
+-- React & Node.js
+-- React & Node.js (vtsls)
 vim.lsp.config("ts_ls", {
     filetypes = {"javascript", "javascriptreact", "typescript", "typescriptreact"},
     root_markers = {"package.json", "tsconfig.json", ".git"},
-    capabilities = capabilities
+    capabilities = capabilities,
+    settings = {
+        typescript = {
+            updateImportsOnFileMove = {
+                enabled = "always"
+            }
+        },
+        javascript = {
+            updateImportsOnFileMove = {
+                enabled = "always"
+            }
+        }
+    }
 })
 vim.lsp.enable("ts_ls")
 
@@ -157,7 +169,7 @@ vim.lsp.config("emmet_language_server", {
 vim.lsp.enable("emmet_language_server")
 
 -- =========================================================================
--- PRETTIER SETUP (Auto-format on save for JS/TS/React)
+-- PRETTIER & FORMATTING
 -- =========================================================================
 local null_ls = require("null-ls")
 null_ls.setup({
@@ -167,7 +179,7 @@ null_ls.setup({
     })}
 })
 
--- Auto-format on save for JS/TS/React files
+-- Auto-format JS/TS/React on save
 vim.api.nvim_create_autocmd("BufWritePre", {
     pattern = {"*.js", "*.jsx", "*.ts", "*.tsx", "*.css", "*.scss", "*.html", "*.json"},
     callback = function()
@@ -178,8 +190,10 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 })
 
 -- =========================================================================
--- AUTO-COMMANDS (Go Auto-import & format)
+-- AUTO-COMMANDS
 -- =========================================================================
+
+-- 1. Go Auto-import & format
 vim.api.nvim_create_autocmd("BufWritePre", {
     pattern = "*.go",
     callback = function()
@@ -203,8 +217,28 @@ vim.api.nvim_create_autocmd("BufWritePre", {
     end
 })
 
+-- 2. AUTO-JUMP TO ERROR ON SAVE (The feature you asked for!)
+vim.api.nvim_create_autocmd("BufWritePost", {
+    pattern = "*",
+    callback = function()
+        -- Check if there are any 'Error' level diagnostics
+        local diagnostics = vim.diagnostic.get(0, {
+            severity = vim.diagnostic.severity.ERROR
+        })
+        if #diagnostics > 0 then
+            -- If errors found, jump to the first one
+            vim.diagnostic.goto_next({
+                severity = vim.diagnostic.severity.ERROR,
+                wrap = true
+            })
+            -- Optional: Force open the float window so you see the message immediately
+            vim.diagnostic.open_float()
+        end
+    end
+})
+
 -- =========================================================================
--- 6. SETTINGS & KEYMAPS
+-- 6. SETTINGS
 -- =========================================================================
 vim.opt.number = true
 vim.opt.mouse = 'a'
@@ -215,12 +249,9 @@ vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
 vim.opt.expandtab = true
 
--- Save with Ctrl + S (All modes)
-vim.keymap.set({'n', 'i', 'v'}, '<C-s>', '<Cmd>w<CR>', {
-    silent = true
-})
-
+-- =========================================================================
 -- 7. AUTOCOMPLETE SETUP
+-- =========================================================================
 local cmp = require('cmp')
 local luasnip = require('luasnip')
 
@@ -231,10 +262,14 @@ cmp.setup({
         end
     },
     mapping = cmp.mapping.preset.insert({
-        ['<C-Space>'] = cmp.mapping.complete(),
+        ['<C-Space>'] = cmp.mapping.complete(), -- The standard one
+        ['<C-n>'] = cmp.mapping.complete(), -- BACKUP: Ctrl + n
+        ['<A-Space>'] = cmp.mapping.complete(), -- BACKUP: Alt + Space
+
         ['<CR>'] = cmp.mapping.confirm({
             select = true
         }),
+
         ['<Tab>'] = cmp.mapping(function(fallback)
             if cmp.visible() then
                 cmp.select_next_item()
@@ -245,6 +280,10 @@ cmp.setup({
             end
         end, {'i', 's'})
     }),
+    -- This ensures the list pops up automatically as you type
+    completion = {
+        completeopt = 'menu,menuone,noinsert'
+    },
     sources = cmp.config.sources({{
         name = 'nvim_lsp'
     }, {
@@ -257,147 +296,132 @@ cmp.setup({
 })
 
 -- =========================================================================
--- LSP KEYMAPS - NAVIGATION & DIAGNOSTICS
+-- KEYMAPS
 -- =========================================================================
 
--- Go to Definition
+-- Navigation
 vim.keymap.set('n', '<C-CR>', vim.lsp.buf.definition, {
     desc = 'Go to definition'
 })
-vim.keymap.set('n', 'gd', vim.lsp.buf.definition, {
-    desc = 'Go to definition'
-})
 
--- Go back after jumping
 vim.keymap.set('n', '<C-o>', '<C-o>', {
     desc = 'Jump back'
 })
-
--- Show hover info
 vim.keymap.set('n', 'K', vim.lsp.buf.hover, {
     desc = 'Show hover info'
 })
 
--- Find references
 vim.keymap.set('n', 'gr', vim.lsp.buf.references, {
     desc = 'Find references'
 })
 
--- Rename
 vim.keymap.set('n', '<F2>', vim.lsp.buf.rename, {
     desc = 'Rename symbol'
 })
 
--- Show error details
+-- Diagnostics (Manual Jumping)
 vim.keymap.set('n', '<C-e>', vim.diagnostic.open_float, {
     desc = 'Show error details'
 })
-
--- Jump to next/previous error
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, {
     desc = 'Next error'
 })
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, {
     desc = 'Previous error'
 })
-
--- Show all errors in file
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, {
     desc = 'Show all errors'
 })
 
--- Manual format
-vim.keymap.set('n', '<S-A-f>', vim.lsp.buf.format, {
-    desc = 'Format document'
-})
-
--- =========================================================================
--- TERMINAL KEYMAPS (TOGGLETERM)
--- =========================================================================
-
--- Toggle floating terminal with Ctrl + \
--- (This is already set in toggleterm config, but you can add more)
-
--- Additional terminal shortcuts
+-- Terminal (ToggleTerm)
 vim.keymap.set({'n', 'i', 't'}, '<C-S-`>', '<cmd>ToggleTerm direction=float<cr>', {
     desc = 'Toggle terminal'
 })
-
--- Alternative notation (some terminals prefer this)
 vim.keymap.set({'n', 'i', 't'}, '<C-~>', '<cmd>ToggleTerm direction=float<cr>', {
     desc = 'Toggle terminal'
 })
 
--- Additional options
-vim.keymap.set('n', '<leader>tf', '<cmd>ToggleTerm direction=float<cr>', {
-    desc = 'Floating terminal'
+-- Editing Shortcuts
+vim.keymap.set('n', '<C-s>', '<Cmd>w<CR>', {
+    silent = true
 })
-vim.keymap.set('n', '<leader>th', '<cmd>ToggleTerm direction=horizontal<cr>', {
-    desc = 'Horizontal terminal'
+vim.keymap.set('i', '<C-s>', '<Cmd>w<CR>', {
+    silent = true
 })
-vim.keymap.set('n', '<leader>tv', '<cmd>ToggleTerm direction=vertical<cr>', {
-    desc = 'Vertical terminal'
-})
--- =========================================================================
--- OTHER KEYMAPS
--- =========================================================================
 
--- Undo with Ctrl + Z in Insert Mode
+-- Undo/Redo
 vim.keymap.set('i', '<C-z>', '<Cmd>undo<CR>', {
     desc = 'Undo'
 })
-
--- Redo with Ctrl + Y
 vim.keymap.set('i', '<C-y>', '<Cmd>redo<CR>', {
     desc = 'Redo'
 })
 
--- Select All
+-- Cut/Copy/Paste
 vim.keymap.set({'n', 'i', 'v'}, '<C-a>', '<Esc>ggVG', {
     desc = 'Select All'
 })
+vim.keymap.set({'n', 'v'}, '<C-x>', '"+d', {
+    desc = 'Cut'
+})
+vim.keymap.set({'n', 'v'}, '<C-c>', '"+y', {
+    desc = 'Copy'
+})
 
--- Press Ctrl + n to open/close the file tree
+-- File Tree
 vim.keymap.set('n', '<C-n>', ':NvimTreeToggle<CR>', {
     silent = true
 })
 
-vim.keymap.set('i', '<C-z>', '<Cmd>undo<CR>', {
-    desc = 'Undo'
+vim.keymap.set('n', '<C-q>', '<C-u>', {
+    desc = 'Scroll up half page'
 })
 
--- Redo with Ctrl + Y
-vim.keymap.set('i', '<C-y>', '<Cmd>redo<CR>', {
-    desc = 'Redo'
+vim.keymap.set('n', '<leader><space>', ':nohlsearch<CR>', {
+    desc = "Clear search highlights"
 })
 
--- Select All
-vim.keymap.set({'n', 'i', 'v'}, '<C-a>', '<Esc>ggVG', {
-    desc = 'Select All'
+vim.keymap.set('i', '<A-\\>', '<Esc>:', {
+    desc = "Run command from insert mode"
 })
 
--- CUT (Ctrl + X) - Works like VS Code!
-vim.keymap.set('v', '<C-x>', '"+d', {
-    desc = 'Cut to clipboard'
+-- 1. Word Navigation (Ctrl + Left/Right)
+-- We use <C-o> to run one normal mode command (b=back, w=word) then stay in insert
+vim.keymap.set('i', '<C-Left>', '<C-o>b', {
+    desc = 'Jump back word'
 })
-vim.keymap.set('n', '<C-x>', '"+dd', {
-    desc = 'Cut line to clipboard'
-})
-
--- COPY (Ctrl + C) - Already works with clipboard setting, but making it explicit
-vim.keymap.set('v', '<C-c>', '"+y', {
-    desc = 'Copy to clipboard'
-})
-vim.keymap.set('n', '<C-c>', '"+yy', {
-    desc = 'Copy line to clipboard'
+vim.keymap.set('i', '<C-Right>', '<C-o>w', {
+    desc = 'Jump forward word'
 })
 
--- PASTE (Ctrl + V) - Paste from clipboard
-vim.keymap.set({'n', 'v', 'i'}, '<C-v>', '<C-r>+', {
-    desc = 'Paste from clipboard'
+-- 2. Line Navigation (Home/End)
+-- Note: We use <C-o>^ for start (ignoring whitespace) and <C-o>$ for end
+vim.keymap.set('i', '<Home>', '<C-o>^', {
+    desc = 'Go to start of text'
+})
+vim.keymap.set('i', '<End>', '<C-o>$', {
+    desc = 'Go to end of line'
 })
 
--- Press Ctrl + n to open/close the file tree
-vim.keymap.set('n', '<C-n>', ':NvimTreeToggle<CR>', {
-    silent = true
+-- 3. Selection / Visual Behavior (Shift + Arrows)
+-- These allow you to start selecting text immediately from Insert Mode
+-- Note: <Esc>v enters Visual Mode, then we move the cursor
+vim.keymap.set('i', '<S-Left>', '<Esc>v<Left>', {
+    desc = 'Select Left'
 })
+
+vim.keymap.set('i', '<S-Right>', '<Esc>v<Right>', {
+    desc = 'Select Right'
+})
+
+-- =========================================================================
+-- TRIGGER CMP IN NORMAL MODE
+-- =========================================================================
+
+-- We use cmp.mapping.complete() to open the menu
+vim.keymap.set('n', '<A-m>', function()
+    require('cmp').complete()
+end, {
+    desc = 'Trigger completion menu'
+})
+

@@ -422,12 +422,22 @@ vim.keymap.set('i', '<S-Right>', '<Esc>v<Right>', {
     desc = 'Select Right'
 })
 
--- In Normal Mode, press Space + r
--- This prompts you: Enter old word, Enter new word
-vim.keymap.set('n', '<leader>r', ":%s/<C-r><C-w>//g<Left><Left>", {
-    desc = "Rename word under cursor"
-})
+-- The command which replace all the highlighted word in visual mode
+-- Ex. (In visual mode, <Ctrl + r>), %/<The old word is automatically input>/{Your new word}/g
+vim.keymap.set('v', '<C-r>', function()
+    -- 1. Yank the selection to a register
+    vim.cmd('normal! "yy')
 
+    -- 2. Escape the yanked text for the command line
+    local selected_text = vim.fn.escape(vim.fn.getreg('y'), '/\\')
+
+    -- 3. Pre-fill the command line
+    -- We use :<C-u> to exit visual mode and clear the range
+    vim.api.nvim_feedkeys(
+        vim.api.nvim_replace_termcodes(':<C-u>%s/' .. selected_text .. '//g<Left><Left>', true, false, true), 'n', false)
+end, {
+    desc = "Substitute pre-filled with selection"
+})
 -- =========================================================================
 -- TRIGGER CMP IN NORMAL MODE
 -- =========================================================================

@@ -422,6 +422,12 @@ vim.keymap.set('i', '<S-Right>', '<Esc>v<Right>', {
     desc = 'Select Right'
 })
 
+-- In Normal Mode, press Space + r
+-- This prompts you: Enter old word, Enter new word
+vim.keymap.set('n', '<leader>r', ":%s/<C-r><C-w>//g<Left><Left>", {
+    desc = "Rename word under cursor"
+})
+
 -- =========================================================================
 -- TRIGGER CMP IN NORMAL MODE
 -- =========================================================================
